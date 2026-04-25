@@ -6,7 +6,7 @@
 
 ---
 
-## 🏗️ Architecture Overview
+# 🏗️ Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
