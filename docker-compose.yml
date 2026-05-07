@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: "3.9"
 
 services:
@@ -98,4 +99,106 @@ volumes:
 
 networks:
   phishing_net:
+=======
+version: "3.9"
+
+services:
+  # ============================
+  # FastAPI Backend
+  # ============================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: phishing_api
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - DB_NAME=phishing_detector
+      - LOG_LEVEL=INFO
+      - GOOGLE_SAFE_BROWSING_KEY=${GOOGLE_SAFE_BROWSING_KEY:-}
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - model_cache:/app/.model_cache
+    restart: unless-stopped
+    networks:
+      - phishing_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================
+  # MongoDB (Chat Log Storage)
+  # ============================
+  mongo:
+    image: mongo:7.0
+    container_name: phishing_mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: phishing_secure_pass
+      MONGO_INITDB_DATABASE: phishing_detector
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/init.js
+    restart: unless-stopped
+    networks:
+      - phishing_net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================
+  # Streamlit Frontend Dashboard
+  # ============================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: phishing_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - phishing_net
+
+  # ============================
+  # Nginx Reverse Proxy (Optional)
+  # ============================
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./docker/nginx.conf:/etc/nginx/nginx.conf
+  #   depends_on:
+  #     - api
+  #     - frontend
+  #   networks:
+  #     - phishing_net
+
+volumes:
+  mongo_data:
+    driver: local
+  model_cache:
+    driver: local
+
+networks:
+  phishing_net:
+>>>>>>> 71c662a9431a745ba0d782da0750690121796c37
     driver: bridge
